@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Обеспеченность образовательной инфраструктурой Ростова-на-Дону</title>
+<link rel="stylesheet" href="css/leaflet.css">
+<link rel="stylesheet" href="css/MarkerCluster.css">
+<link rel="stylesheet" href="css/MarkerCluster.Default.css">
+<style>
+html, body, #map { width:100%; height:100%; margin:0; padding:0; font-family: Arial, sans-serif; }
+.leaflet-container { background:#f6f6f6; }
+.leaflet-popup-content table { border-collapse:collapse; font-size:14px; }
+.leaflet-popup-content th { text-align:left; vertical-align:top; padding:3px 12px 3px 0; font-weight:700; }
+.leaflet-popup-content td { padding:3px 0; }
+.map-panel { background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.25); padding:10px 12px; max-width:380px; }
+.map-panel h3 { margin:0 0 8px 0; font-size:15px; }
+.group-row { display:block; padding:5px 2px; font-size:14px; cursor:pointer; }
+.group-row input { margin-right:7px; }
+.hint { font-size:12px; color:#666; line-height:1.35; margin-top:7px; }
+.school-marker, .kg-marker { width:12px; height:12px; transform:rotate(45deg); border:1px solid rgba(0,0,0,.15); box-sizing:border-box; }
+.school-marker { background:#3b77b4; }
+.kg-marker { background:#f00017; }
+.custom-cluster { border-radius:50%; color:#fff; text-align:center; font-weight:700; box-shadow:0 1px 5px rgba(0,0,0,.28); border:0; background:transparent; }
+.custom-cluster div { width:34px; height:34px; line-height:34px; border-radius:50%; }
+.custom-cluster.school div { background:#3b77b4; }
+.custom-cluster.kindergarten div { background:#f00017; }
+.label-icon { width:auto !important; height:auto !important; background:transparent !important; border:0 !important; }
+.district-label, .city-label { display:inline-block; width:max-content; max-width:none; background:rgba(255,255,255,.86); border:1px solid rgba(60,60,60,.25); border-radius:4px; padding:2px 7px; color:#222; font-size:14px; font-weight:600; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+.city-label { font-size:15px; font-weight:700; }
+.loading-badge { position:absolute; left:50%; top:12px; transform:translateX(-50%); z-index:1000; background:rgba(0,0,0,.72); color:white; padding:7px 12px; border-radius:14px; font-size:13px; display:none; }
+.metric-title { font-weight:700; font-size:15px; margin-bottom:6px; }
+.legend { line-height:1.45; margin-top:8px; font-size:12px; color:#333; }
+.legend details { border-top:1px solid rgba(0,0,0,.14); margin-top:9px; padding-top:7px; }
+.legend summary { cursor:pointer; font-weight:700; font-size:13px; margin-bottom:6px; }
+.legend-title { font-weight:700; margin:4px 0 6px; }
+.legend-row { display:flex; align-items:center; gap:7px; margin:4px 0; }
+.legend span.sw { flex:0 0 auto; display:inline-block; width:18px; height:13px; border:1px solid #555; vertical-align:-2px; opacity:.9; }
+.legend-section { margin:7px 0 9px; }
+.legend-subtitle { font-weight:700; margin:8px 0 5px; font-size:12px; }
+.legend-symbol { flex:0 0 auto; display:inline-block; width:18px; height:13px; box-sizing:border-box; }
+.legend-diamond { width:12px; height:12px; transform:rotate(45deg); border:1px solid rgba(0,0,0,.25); margin-left:3px; margin-right:3px; }
+.legend-line { width:26px; height:0; border-top:2px dashed #125886; }
+.legend-res { width:18px; height:10px; background:#111; border:1px solid #111; opacity:.9; }
+.popup-pie-wrap { display:flex; gap:12px; align-items:center; margin:8px 0 6px; }
+.popup-pie { width:72px; height:72px; border-radius:50%; background:conic-gradient(var(--pie-color,#6fbf4a) 0% var(--p), #e5e5e5 var(--p) 100%); border:1px solid #bbb; flex:0 0 auto; }
+.popup-pie-label { font-size:13px; line-height:1.35; }
+.popup-pct { font-size:18px; font-weight:700; }
+.search-box { position:relative; margin:0 0 10px 0; }
+.search-box input { width:100%; box-sizing:border-box; border:1px solid rgba(0,0,0,.25); border-radius:6px; padding:7px 8px; font-size:13px; outline:none; background:#fff; }
+.search-box input:focus { border-color:#3b77b4; box-shadow:0 0 0 2px rgba(59,119,180,.15); }
+.search-results { display:none; position:absolute; left:0; right:0; top:33px; z-index:1200; max-height:245px; overflow:auto; background:#fff; border:1px solid rgba(0,0,0,.25); border-radius:7px; box-shadow:0 4px 14px rgba(0,0,0,.24); }
+.search-result { padding:7px 8px; cursor:pointer; border-bottom:1px solid rgba(0,0,0,.08); font-size:12px; line-height:1.25; }
+.search-result:hover { background:#f1f5fa; }
+.search-result-type { font-weight:700; color:#333; margin-bottom:2px; }
+.search-result-text { color:#222; }
+.search-status { display:none; padding:6px 2px 0; font-size:12px; color:#666; }
+.search-clear { position:absolute; right:6px; top:5px; border:0; background:transparent; color:#777; font-size:18px; line-height:18px; cursor:pointer; display:none; }
+.search-hit-icon { background:#fff; border:2px solid #222; border-radius:50%; width:16px; height:16px; box-shadow:0 1px 5px rgba(0,0,0,.35); }
+
+.info-button { width:34px; height:34px; border:0; border-radius:4px; background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.35); font-weight:700; font-size:18px; cursor:pointer; }
+.info-button:hover, .fullscreen-button:hover { background:#f4f4f4; }
+.fullscreen-button { width:34px; height:34px; border:0; border-radius:4px; background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.35); font-size:17px; cursor:pointer; line-height:34px; }
+.info-overlay { position:absolute; inset:0; z-index:1600; background:rgba(0,0,0,.28); display:none; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; }
+.info-card { width:min(680px, calc(100vw - 40px)); max-height:calc(100vh - 60px); overflow:auto; background:rgba(255,255,255,.98); border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.32); padding:20px 22px; color:#222; line-height:1.45; }
+.info-card h2 { margin:0 30px 10px 0; font-size:20px; }
+.info-card h3 { margin:16px 0 7px; font-size:15px; }
+.info-card p { margin:7px 0; font-size:14px; }
+.info-card ul { margin:7px 0 7px 22px; padding:0; font-size:14px; }
+.info-close { float:right; border:0; background:transparent; font-size:28px; line-height:22px; cursor:pointer; color:#555; }
+.map-footer { position:absolute; left:50%; bottom:4px; transform:translateX(-50%); z-index:850; background:rgba(255,255,255,.86); border:1px solid rgba(0,0,0,.12); border-radius:5px; padding:3px 8px; font-size:11px; color:#333; box-shadow:0 1px 4px rgba(0,0,0,.15); max-width:520px; text-align:center; pointer-events:auto; }
+.map-footer a { color:#125886; text-decoration:none; font-weight:700; }
+.map-footer a:hover { text-decoration:underline; }
+.leaflet-bottom.leaflet-left { margin-bottom:24px; }
+
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="info-overlay" id="infoOverlay" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+  <div class="info-card">
+    <button class="info-close" id="infoClose" title="Закрыть">×</button>
+    <h2 id="infoTitle">Обеспеченность образовательной инфраструктурой Ростова-на-Дону</h2>
+    <p>Интерактивная карта показывает пространственную обеспеченность населения Ростова-на-Дону образовательной инфраструктурой и помогает выявлять территории с высоким уровнем дефицита доступности.</p>
+    <h3>Как читать карту</h3>
+    <p>Выберите один из четырёх режимов анализа: детские сады, начальная школа, средняя и старшая школа или интегральная оценка.</p>
+    <p>Ячейки сетки окрашены согласно пятибалльной шкале оценивания: чем темнее ячейка, тем ниже обеспеченность.</p>
+    <p>Пунктирные контуры показывают зоны нормативной доступности выбранного типа образовательной инфраструктуры.</p>
+    <p>При приближении подгружаются жилые здания; по ячейкам и объектам можно открыть выноски с расчётными показателями.</p>
+    <h3>Методология</h3>
+    <p>Расчёты выполнены на гексагональной сетке 500×500 метров. Для тематических режимов оценивается население ячейки, население в зоне нормативной доступности и доля обеспеченного населения, для интегрального режима используется сводная балльная оценка по нескольким типам образовательной инфраструктуры.</p>
+    <h3>Данные и ограничения</h3>
+    <p>Для создания набора данных по жилым зданиям, их местоположению и населению использовались данные: ГИС ЖКХ, How old is this house; для создания набора данных по образовательным объектам — данные Администрации города Ростова-на-Дону, открытых геоинформационных справочников; для определения административных границ — данные портала OpenStreetMap, а также картографическая подложка CartoDB Positron. Карта предназначена для предварительного аналитического просмотра и не заменяет детальное проектное обследование.</p>
+  </div>
+</div>
+<div class="map-footer">Проект выполнен в рамках курса «Методы пространственного анализа. Продвинутый уровень» студентами группы БГП221 Павловым Никитой Сергеевичем и Шитовым Григорием Евгеньевичем. <a id="githubLink" href="https://github.com/n9461616/rostov-education-webgis" target="_blank" rel="noopener">GitHub / техническое описание</a></div>
+
+<div class="loading-badge" id="loadingBadge">Подгружаю детальные здания…</div>
+<script src="js/leaflet.js"></script>
+<script src="js/leaflet.markercluster.js"></script>
+<script src="data/grid_all.js"></script>
+<script src="data/grid_pop.js"></script>
+<script src="data/schools.js"></script>
+<script src="data/kindergartens.js"></script>
+<script src="data/city.js"></script>
+<script src="data/districts.js"></script>
+<script src="data/iso_kindergarten.js"></script>
+<script src="data/iso_primary.js"></script>
+<script src="data/iso_senior.js"></script>
+<script src="data/residential_chunks_index.js"></script>
+<script>
+const GROUPS = {
+  kindergarten: {label:'Детские сады', metric:'kindergarten', point:'kindergarten'},
+  primary: {label:'Начальная школа', metric:'school500', point:'school'},
+  senior: {label:'Средняя и старшая школа', metric:'school750', point:'school'},
+  integral: {label:'Интегральная оценка пространственной обеспеченности', metric:'general', point:'both'}
+};
+let activeGroup = 'integral';
+const THEME_COLORS = {kindergarten:'#f00017', primary:'#3b77b4', senior:'#3b77b4', integral:'#6fbf4a'};
+const ISO_MIN_ZOOM = 14;
+function legendRows(rows){
+  return rows.map(r=>`<div class="legend-row"><span class="sw" style="background:${r[0]}"></span><span>${r[1]}</span></div>`).join('');
+}
+function markerLegend(type){
+  if(type==='kg') return `<div class="legend-row"><span class="legend-symbol legend-diamond" style="background:#f00017"></span><span>Здания детских садов</span></div>`;
+  if(type==='school') return `<div class="legend-row"><span class="legend-symbol legend-diamond" style="background:#3b77b4"></span><span>Здания школ</span></div>`;
+  return `<div class="legend-row"><span class="legend-symbol legend-diamond" style="background:#f00017"></span><span>Здания детских садов</span></div><div class="legend-row"><span class="legend-symbol legend-diamond" style="background:#3b77b4"></span><span>Здания школ</span></div>`;
+}
+function infraLegend(group){
+  const lineColor = group==='kindergarten' ? '#811119' : '#125886';
+  const zoneText = group==='kindergarten' ? 'Зона нормативной доступности детских садов' : (group==='primary' ? 'Зона нормативной доступности начальных школ' : 'Зона нормативной доступности средних и старших школ');
+  let html = `<div class="legend-subtitle">Объекты и зоны</div>`;
+  if(group==='kindergarten') html += markerLegend('kg');
+  else if(group==='primary' || group==='senior') html += markerLegend('school');
+  else html += markerLegend('both');
+  if(group!=='integral') html += `<div class="legend-row"><span class="legend-symbol legend-line" style="border-top-color:${lineColor}"></span><span>${zoneText}</span></div>`;
+  html += `<div class="legend-row"><span class="legend-symbol legend-res"></span><span>Жилые здания</span></div>`;
+  return html;
+}
+function coverageLegend(title){
+  return `<div class="legend-subtitle">${title}</div>` + legendRows([
+    ['rgba(213,213,213,.78)','менее 20 процентов — 1'],
+    ['rgba(170,170,170,.78)','от 20 до 40 процентов — 2'],
+    ['rgba(128,128,128,.78)','от 40 до 60 процентов — 3'],
+    ['rgba(85,85,85,.78)','от 60 до 80 процентов — 4'],
+    ['rgba(43,43,43,.78)','более 80 процентов — 5']
+  ]);
+}
+function legendHTML(group){
+  if(group==='integral') {
+    return infraLegend(group) + `<div class="legend-subtitle">Количество баллов интегральной оценки пространственной обеспеченности</div>` + legendRows([
+      ['rgba(213,213,213,.78)','4 и меньше'],
+      ['rgba(170,170,170,.78)','5–7'],
+      ['rgba(128,128,128,.78)','8–10'],
+      ['rgba(85,85,85,.78)','11–13'],
+      ['rgba(43,43,43,.78)','14 и более']
+    ]);
+  }
+  const title = group==='kindergarten' ? 'Уровень покрытия населения нормативной зоной доступности детских садов и оценка по пятибалльной шкале' : (group==='primary' ? 'Уровень покрытия населения нормативной зоной доступности начальных школ и оценка по пятибалльной шкале' : 'Уровень покрытия населения нормативной зоной доступности средних и старших школ и оценка по пятибалльной шкале');
+  return infraLegend(group) + coverageLegend(title);
+}
+const canvasRenderer = L.canvas({padding:0.35});
+const map = L.map('map', {zoomControl:false, preferCanvas:true, minZoom:10, maxZoom:20, renderer:canvasRenderer}).fitBounds([[47.11461396319272,39.402154738429196],[47.37580646493022,39.87400180518026]]);
+L.control.zoom({position:'topleft'}).addTo(map);
+L.control.scale({position:'bottomleft', metric:true, imperial:false}).addTo(map);
+const InfoControl = L.Control.extend({
+  options:{position:'topleft'},
+  onAdd:function(){
+    const div=L.DomUtil.create('div','leaflet-bar');
+    div.innerHTML='<button class="info-button" title="О проекте">i</button>';
+    L.DomEvent.disableClickPropagation(div);
+    div.querySelector('button').addEventListener('click',()=>{document.getElementById('infoOverlay').style.display='flex';});
+    return div;
+  }
+});
+const FullscreenControl = L.Control.extend({
+  options:{position:'topleft'},
+  onAdd:function(){
+    const div=L.DomUtil.create('div','leaflet-bar');
+    div.innerHTML='<button class="fullscreen-button" title="Полноэкранный режим">⛶</button>';
+    L.DomEvent.disableClickPropagation(div);
+    div.querySelector('button').addEventListener('click',()=>{
+      const el=document.documentElement;
+      if(!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen();
+      else if(document.exitFullscreen) document.exitFullscreen();
+    });
+    return div;
+  }
+});
+map.addControl(new InfoControl());
+map.addControl(new FullscreenControl());
+document.getElementById('infoClose').addEventListener('click',()=>{document.getElementById('infoOverlay').style.display='none';});
+document.getElementById('infoOverlay').addEventListener('click',(e)=>{ if(e.target.id==='infoOverlay') e.target.style.display='none'; });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') document.getElementById('infoOverlay').style.display='none'; });
+const base = L.tileLayer('https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png', {opacity:1, minZoom:0, maxZoom:20, maxNativeZoom:20, attribution:'Map tiles by CartoDB, under CC BY 3.0. Data by OpenStreetMap, under ODbL.'}).addTo(map);
+map.createPane('gridPane'); map.getPane('gridPane').style.zIndex=410;
+map.createPane('isoPane'); map.getPane('isoPane').style.zIndex=420;
+map.createPane('resPane'); map.getPane('resPane').style.zIndex=430;
+map.createPane('boundaryPane'); map.getPane('boundaryPane').style.zIndex=450;
+map.createPane('markerPane'); map.getPane('markerPane').style.zIndex=460;
+map.createPane('labelPane'); map.getPane('labelPane').style.zIndex=470;
+const thematic = L.layerGroup().addTo(map);
+const residentialGroup = L.layerGroup().addTo(map);
+const markerGroup = L.layerGroup().addTo(map);
+
+function esc(v){ return (v===null || v===undefined) ? '' : String(v); }
+function row(label,val){ if(val===null || val===undefined || val==='') return ''; return `<tr><th>${label}</th><td>${esc(val)}</td></tr>`; }
+function popupEducation(p,type){ return `<table>${row('Наименование',p.name)}${row('Адрес',p.address)}${row('Район',p.district)}${row('Город',p.city)}</table>`; }
+function fmtInt(v){ if(v===null||v===undefined||isNaN(Number(v))) return ''; return Math.round(Number(v)).toLocaleString('ru-RU'); }
+function pctNumber(v){ if(v===null||v===undefined||isNaN(Number(v))) return null; return Math.max(0, Math.min(100, Math.round(Number(v)*100))); }
+function coveragePopup(total, covered, proportion, color){
+  const p = pctNumber(proportion);
+  const safeCovered = (covered===null || covered===undefined || isNaN(Number(covered))) ? '' : fmtInt(covered);
+  const pie = p===null ? '' : `<div class="popup-pie-wrap"><div class="popup-pie" style="--p:${p}%; --pie-color:${color}"></div><div class="popup-pie-label"><div class="popup-pct">${p}%</div><div>населения ячейки находится в зоне доступности</div></div></div>`;
+  return `${row('Население ячейки', fmtInt(total))}${row('Население в зоне доступности', safeCovered)}${pie}`;
+}
+function popupGrid(p){
+  const total = Number(p.amount_of_people_int_sum || 0);
+  if(activeGroup==='kindergarten') {
+    const covered = total * Number(p.proportion_kindergarten || 0);
+    return `<table>${coveragePopup(total, covered, p.proportion_kindergarten, THEME_COLORS.kindergarten)}${row('Оценка доступности',p.mark_kindergarten)}</table>`;
+  }
+  if(activeGroup==='primary') {
+    const covered = total * Number(p.proportion_school_500 || 0);
+    return `<table>${coveragePopup(total, covered, p.proportion_school_500, THEME_COLORS.primary)}${row('Оценка доступности',p.mark_school_500)}</table>`;
+  }
+  if(activeGroup==='senior') {
+    const covered = total * Number(p.proportion_school_750 || 0);
+    return `<table>${coveragePopup(total, covered, p.proportion_school_750, THEME_COLORS.senior)}${row('Оценка доступности',p.mark_school_750)}</table>`;
+  }
+  return `<div class="metric-title">Интегральная оценка</div><table>${row('Интегральная оценка обеспеченности',p.general_mark)}</table>`;
+}
+function pct(v){ if(v===null||v===undefined||isNaN(Number(v))) return ''; return Math.round(Number(v)*100)+'%'; }
+function popupResidential(p){
+  if(activeGroup==='kindergarten') return `<table>${row('Адрес',p.address)}${row('В зоне доступности детских садов',p.is_in_kindergarten_iso)}</table>`;
+  if(activeGroup==='primary') return `<table>${row('Адрес',p.address)}${row('В зоне доступности начальных школ',p.is_in_school_iso_500)}</table>`;
+  if(activeGroup==='senior') return `<table>${row('Адрес',p.address)}${row('В зоне доступности средней и старшей школы',p.is_in_school_iso_750)}</table>`;
+  return `<table>${row('Адрес',p.address)}${row('Детские сады',p.is_in_kindergarten_iso)}${row('Начальная школа',p.is_in_school_iso_500)}${row('Средняя и старшая школа',p.is_in_school_iso_750)}</table>`;
+}
+function markerIcon(cls){ return L.divIcon({className:'', html:`<div class="${cls}"></div>`, iconSize:[14,14], iconAnchor:[7,7]}); }
+const kgIcon=markerIcon('kg-marker'); const schoolIcon=markerIcon('school-marker');
+
+function styleGridOutline(){ return {pane:'gridPane', renderer:canvasRenderer, color:'#333', weight:.55, opacity:.75, fill:false, interactive:false}; }
+function colorScale(v){
+  if(v===null||v===undefined||isNaN(Number(v))) return 'rgba(255,255,255,0)';
+  v=Number(v);
+  if(activeGroup==='integral') {
+    if(v<=4) return 'rgba(213,213,213,.78)';
+    if(v<=7) return 'rgba(170,170,170,.78)';
+    if(v<=10) return 'rgba(128,128,128,.78)';
+    if(v<=13) return 'rgba(85,85,85,.78)';
+    return 'rgba(43,43,43,.78)';
+  }
+  if(v<=1) return 'rgba(213,213,213,.78)';
+  if(v<=2) return 'rgba(170,170,170,.78)';
+  if(v<=3) return 'rgba(128,128,128,.78)';
+  if(v<=4) return 'rgba(85,85,85,.78)';
+  return 'rgba(43,43,43,.78)';
+}
+function metricValue(p){
+  if(activeGroup==='kindergarten') return p.mark_kindergarten;
+  if(activeGroup==='primary') return p.mark_school_500;
+  if(activeGroup==='senior') return p.mark_school_750;
+  return p.general_mark;
+}
+function styleGridPop(feature){ return {pane:'gridPane', renderer:canvasRenderer, color:'#333', weight:.5, opacity:.8, fill:true, fillOpacity:1, fillColor:colorScale(metricValue(feature.properties)), interactive:true}; }
+function styleIso(color){ return {pane:'isoPane', renderer:canvasRenderer, color:color, weight:2.5, opacity:1, dashArray:'12,4', fill:false, fillOpacity:0, interactive:false}; }
+function styleCity(){ return {pane:'boundaryPane', renderer:canvasRenderer, color:'#000', weight:2.2, fill:false, interactive:false}; }
+function styleDistrict(){ return {pane:'boundaryPane', renderer:canvasRenderer, color:'#000', weight:1.5, dashArray:'4,3', fill:false, interactive:false}; }
+function styleResidential(feature){ return {pane:'resPane', renderer:canvasRenderer, color:'#111', weight:.5, opacity:1, fill:true, fillColor:'#111', fillOpacity:.9, interactive:true}; }
+
+// global lightweight context layers
+const gridOutline = L.geoJSON(geo_grid_all, {style:styleGridOutline, pane:'gridPane', renderer:canvasRenderer}).addTo(map);
+const cityLayer = L.geoJSON(geo_city, {style:styleCity, pane:'boundaryPane', renderer:canvasRenderer});
+const districtsLayer = L.geoJSON(geo_districts, {style:styleDistrict, pane:'boundaryPane', renderer:canvasRenderer});
+const districtLabels = L.layerGroup();
+const cityLabels = L.layerGroup();
+function featureCenter(f){ return L.geoJSON(f).getBounds().getCenter(); }
+function rebuildBoundariesAndLabels(){
+  cityLabels.clearLayers(); districtLabels.clearLayers();
+  if(map.hasLayer(cityLayer)) map.removeLayer(cityLayer);
+  if(map.hasLayer(districtsLayer)) map.removeLayer(districtsLayer);
+  if(map.hasLayer(cityLabels)) map.removeLayer(cityLabels);
+  if(map.hasLayer(districtLabels)) map.removeLayer(districtLabels);
+  const z = map.getZoom();
+  if(z <= 11){
+    cityLayer.addTo(map);
+    cityLabels.addTo(map);
+    geo_city.features.forEach(f=>{
+      const c=featureCenter(f);
+      const name=(f.properties.name || 'Ростов-на-Дону').replace('городской округ ', '');
+      L.marker(c,{pane:'labelPane', interactive:false, icon:L.divIcon({className:'label-icon', html:`<div class="city-label">${esc(name)}</div>`, iconSize:null, iconAnchor:[65,10]})}).addTo(cityLabels);
+    });
+  } else {
+    districtsLayer.addTo(map);
+    districtLabels.addTo(map);
+    geo_districts.features.forEach(f=>{
+      const c=featureCenter(f);
+      L.marker(c,{pane:'labelPane', interactive:false, icon:L.divIcon({className:'label-icon', html:`<div class="district-label">${esc(f.properties.name)}</div>`, iconSize:null, iconAnchor:[50,10]})}).addTo(districtLabels);
+    });
+  }
+}
+map.on('zoomend', rebuildBoundariesAndLabels); rebuildBoundariesAndLabels();
+
+function clusterIcon(type){
+  const cls = type==='kg' ? 'kindergarten' : 'school';
+  return function(cluster){
+    const count = cluster.getChildCount();
+    return L.divIcon({html:`<div>${count}</div>`, className:`custom-cluster ${cls}`, iconSize:[40,40], iconAnchor:[20,20]});
+  };
+}
+function createPointCluster(features, type){
+  const cluster = L.markerClusterGroup({showCoverageOnHover:false, spiderfyDistanceMultiplier:2, disableClusteringAtZoom:17, iconCreateFunction:clusterIcon(type)});
+  features.forEach(f=>{ const c=f.geometry.coordinates, p=f.properties; const m=L.marker([c[1],c[0]], {pane:'markerPane', icon:type==='kg'?kgIcon:schoolIcon}); m.bindPopup(popupEducation(p,type)); cluster.addLayer(m); });
+  return cluster;
+}
+const schoolCluster = createPointCluster(geo_schools.features,'school');
+const kgCluster = createPointCluster(geo_kindergartens.features,'kg');
+
+let gridPopLayer=null, isoLayer=null;
+function addIsoIfVisible(){
+  if(isoLayer && map.getZoom() >= ISO_MIN_ZOOM && !thematic.hasLayer(isoLayer)) thematic.addLayer(isoLayer);
+}
+function removeIsoIfHidden(){
+  if(isoLayer && map.getZoom() < ISO_MIN_ZOOM && thematic.hasLayer(isoLayer)) thematic.removeLayer(isoLayer);
+}
+function updateIsoVisibility(){ addIsoIfVisible(); removeIsoIfHidden(); }
+function updateTheme(){
+  thematic.clearLayers(); markerGroup.clearLayers(); residentialGroup.clearLayers(); loadedChunkLayers.forEach(l=>map.removeLayer(l)); loadedChunkLayers.clear();
+  gridPopLayer = L.geoJSON(geo_grid_pop, {style:styleGridPop, pane:'gridPane', renderer:canvasRenderer, onEachFeature:(f,l)=>l.bindPopup(popupGrid(f.properties))});
+  thematic.addLayer(gridPopLayer);
+  if(activeGroup==='kindergarten') { isoLayer=L.geoJSON(geo_iso_kindergarten,{style:()=>styleIso('#811119'), pane:'isoPane', renderer:canvasRenderer}); markerGroup.addLayer(kgCluster); }
+  else if(activeGroup==='primary') { isoLayer=L.geoJSON(geo_iso_primary,{style:()=>styleIso('#125886'), pane:'isoPane', renderer:canvasRenderer}); markerGroup.addLayer(schoolCluster); }
+  else if(activeGroup==='senior') { isoLayer=L.geoJSON(geo_iso_senior,{style:()=>styleIso('#125886'), pane:'isoPane', renderer:canvasRenderer}); markerGroup.addLayer(schoolCluster); }
+  else { markerGroup.addLayer(kgCluster); markerGroup.addLayer(schoolCluster); }
+  updateIsoVisibility();
+  updateResidentialDebounced();
+}
+
+// Residential chunks loaded only at large zoom and only inside current viewport.
+const loadedChunkLayers = new Map();
+const loadingChunks = new Set();
+function bboxIntersects(a,b){ return !(a[2]<b[0] || a[0]>b[2] || a[3]<b[1] || a[1]>b[3]); }
+function currentBbox(){ const b=map.getBounds().pad(.15); return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]; }
+function loadScript(src, cb){ const s=document.createElement('script'); s.src=src; s.onload=cb; document.body.appendChild(s); }
+function addResidentialChunk(info){
+  if(loadedChunkLayers.has(info.v) || loadingChunks.has(info.v)) return;
+  loadingChunks.add(info.v); document.getElementById('loadingBadge').style.display='block';
+  loadScript(info.f, ()=>{ loadingChunks.delete(info.v); const data=window[info.v]; if(!data) return; const layer=L.geoJSON(data,{style:styleResidential,pane:'resPane',renderer:canvasRenderer,onEachFeature:(f,l)=>l.bindPopup(popupResidential(f.properties))}); loadedChunkLayers.set(info.v, layer); residentialGroup.addLayer(layer); if(loadingChunks.size===0) document.getElementById('loadingBadge').style.display='none'; });
+}
+function updateResidential(){
+  const z=map.getZoom();
+  if(z<17) { residentialGroup.clearLayers(); loadedChunkLayers.clear(); return; }
+  const view=currentBbox();
+  const needed = new Set();
+  residentialChunks.forEach(info=>{ if(bboxIntersects(info.b, view)) { needed.add(info.v); addResidentialChunk(info); }});
+  for(const [v,layer] of loadedChunkLayers.entries()) { if(!needed.has(v)) { residentialGroup.removeLayer(layer); loadedChunkLayers.delete(v); } }
+}
+let resTimer=null; function updateResidentialDebounced(){ clearTimeout(resTimer); resTimer=setTimeout(updateResidential,180); }
+map.on('zoomend', updateIsoVisibility);
+map.on('zoomend moveend', updateResidentialDebounced);
+
+
+// Global lightweight search: schools/kindergartens by name/address and residential buildings by address.
+let searchIndexReady = false;
+let searchIndexLoading = false;
+let normalizedSearch = [];
+let searchMarker = null;
+function normalizeSearchText(s){ return String(s||'').toLowerCase().replace(/ё/g,'е').replace(/[«»"'.,;:()№#]/g,' ').replace(/\s+/g,' ').trim(); }
+function ensureSearchIndex(cb){
+  if(searchIndexReady) { cb(); return; }
+  if(searchIndexLoading) { const t=setInterval(()=>{ if(searchIndexReady){ clearInterval(t); cb(); } },120); return; }
+  searchIndexLoading = true;
+  const status = document.getElementById('searchStatus');
+  if(status){ status.style.display='block'; status.textContent='Загружаю поисковый индекс…'; }
+  loadScript('data/search_index.js', ()=>{
+    const arr = window.searchIndex || [];
+    normalizedSearch = arr.map((it, idx)=>({idx, item:it, norm:normalizeSearchText((it.q||'')+' '+(it.t||''))}));
+    searchIndexReady = true;
+    searchIndexLoading = false;
+    if(status){ status.textContent=''; status.style.display='none'; }
+    cb();
+  });
+}
+function searchItems(query){
+  const q = normalizeSearchText(query);
+  if(q.length < 2) return [];
+  const parts = q.split(' ').filter(Boolean);
+  const starts = [], contains = [];
+  for(const rec of normalizedSearch){
+    let ok = true;
+    for(const part of parts){ if(!rec.norm.includes(part)){ ok=false; break; } }
+    if(!ok) continue;
+    if(rec.norm.startsWith(q)) starts.push(rec.item); else contains.push(rec.item);
+    if(starts.length + contains.length >= 20) break;
+  }
+  return starts.concat(contains).slice(0,10);
+}
+function resultLabel(item){ return esc(item.q || ''); }
+function resultType(item){ return esc(item.t || 'Объект'); }
+function zoomToSearchResult(item){
+  const lat = Number(item.y), lng = Number(item.x);
+  if(!isFinite(lat) || !isFinite(lng)) return;
+  if(searchMarker) map.removeLayer(searchMarker);
+  const type = item.t || '';
+  let html = `<b>${resultType(item)}</b><br>${resultLabel(item)}`;
+  searchMarker = L.marker([lat,lng], {pane:'markerPane', icon:L.divIcon({className:'', html:'<div class="search-hit-icon"></div>', iconSize:[20,20], iconAnchor:[10,10]})}).addTo(map);
+  searchMarker.bindPopup(html).openPopup();
+  map.setView([lat,lng], type==='Жилое здание' ? 18 : 17);
+  updateResidentialDebounced();
+}
+function setupSearchControl(container){
+  const input = container.querySelector('#globalSearchInput');
+  const results = container.querySelector('#searchResults');
+  const status = container.querySelector('#searchStatus');
+  const clear = container.querySelector('#searchClear');
+  if(!input || !results) return;
+  let timer = null;
+  function hideResults(){ results.style.display='none'; }
+  function render(items){
+    if(!input.value.trim()){ hideResults(); return; }
+    if(!items.length){ results.innerHTML='<div class="search-result"><div class="search-result-text">Ничего не найдено</div></div>'; results.style.display='block'; return; }
+    results.innerHTML = items.map((it,i)=>`<div class="search-result" data-i="${i}"><div class="search-result-type">${resultType(it)}</div><div class="search-result-text">${resultLabel(it)}</div></div>`).join('');
+    results.querySelectorAll('.search-result[data-i]').forEach(el=>el.addEventListener('click',()=>{ const item=items[Number(el.dataset.i)]; input.value=resultLabel(item); clear.style.display='block'; hideResults(); zoomToSearchResult(item); }));
+    results.style.display='block';
+  }
+  function runSearch(){
+    const q = input.value.trim();
+    clear.style.display = q ? 'block' : 'none';
+    if(q.length < 2){ hideResults(); if(status) status.style.display='none'; return; }
+    ensureSearchIndex(()=>render(searchItems(q)));
+  }
+  input.addEventListener('input',()=>{ clearTimeout(timer); timer=setTimeout(runSearch,180); });
+  input.addEventListener('focus',()=>{ if(input.value.trim().length>=2) runSearch(); });
+  clear.addEventListener('click',()=>{ input.value=''; clear.style.display='none'; hideResults(); input.focus(); if(searchMarker){ map.removeLayer(searchMarker); searchMarker=null; } });
+  document.addEventListener('click',(e)=>{ if(!container.contains(e.target)) hideResults(); });
+}
+
+// Custom radio control: only four selectable themes, one at a time.
+const ThemeControl = L.Control.extend({
+  options:{position:'topright'},
+  onAdd:function(map){
+    const div=L.DomUtil.create('div','map-panel');
+    div.innerHTML=`<div class="search-box"><input id="globalSearchInput" type="text" placeholder="неЯндекс: найдётся не всё" autocomplete="off"><button class="search-clear" id="searchClear" title="Очистить">×</button><div class="search-results" id="searchResults"></div><div class="search-status" id="searchStatus"></div></div><h3>Слой анализа</h3>`+Object.keys(GROUPS).map(k=>`<label class="group-row"><input type="radio" name="theme" value="${k}" ${k===activeGroup?'checked':''}>${GROUPS[k].label}</label>`).join('')+`<div class="legend"><details open><summary>Легенда</summary><div id="legendContent"></div></details></div>`;
+    L.DomEvent.disableClickPropagation(div); L.DomEvent.disableScrollPropagation(div);
+    const refreshLegend = () => { const el=div.querySelector('#legendContent'); if(el) el.innerHTML=legendHTML(activeGroup); };
+    div.querySelectorAll('input[name="theme"]').forEach(inp=>inp.addEventListener('change', e=>{ activeGroup=e.target.value; updateTheme(); refreshLegend(); }));
+    refreshLegend();
+    setupSearchControl(div);
+    return div;
+  }
+});
+map.addControl(new ThemeControl());
+updateTheme();
+</script>
+</body>
+</html>
